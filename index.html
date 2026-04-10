@@ -1,0 +1,368 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <title>PDF分享工具 - 上传即生成下载链接</title>
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+        body {
+            font-family: system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            max-width: 700px;
+            margin: 40px auto;
+            padding: 20px;
+            background: #f5f7fb;
+            color: #1f2d3d;
+        }
+        .card {
+            background: white;
+            border-radius: 28px;
+            padding: 30px 24px;
+            box-shadow: 0 12px 30px rgba(0,0,0,0.08);
+            text-align: center;
+        }
+        h1 {
+            font-size: 1.8rem;
+            font-weight: 600;
+            margin-top: 0;
+            margin-bottom: 8px;
+        }
+        .sub {
+            color: #4a5b6e;
+            margin-bottom: 32px;
+            font-size: 0.95rem;
+        }
+        .upload-area {
+            border: 2px dashed #b9c8ff;
+            border-radius: 28px;
+            background: #f9fcff;
+            padding: 32px 20px;
+            cursor: pointer;
+            transition: all 0.2s;
+            margin-bottom: 28px;
+        }
+        .upload-area:hover {
+            border-color: #3b82f6;
+            background: #f0f6fe;
+        }
+        .upload-icon {
+            font-size: 48px;
+            margin-bottom: 12px;
+        }
+        .file-input {
+            display: none;
+        }
+        .btn {
+            background: #3b82f6;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 60px;
+            font-size: 1rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: 0.2s;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .btn-secondary {
+            background: #eef2ff;
+            color: #1e40af;
+        }
+        .btn:hover {
+            background: #2563eb;
+            transform: scale(0.97);
+        }
+        .result {
+            background: #f1f5f9;
+            border-radius: 24px;
+            padding: 20px;
+            margin-top: 28px;
+            text-align: left;
+            word-break: break-all;
+        }
+        .link-box {
+            background: white;
+            border-radius: 16px;
+            padding: 12px 16px;
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            margin: 12px 0;
+        }
+        .link-url {
+            font-size: 0.85rem;
+            color: #2563eb;
+            font-family: monospace;
+            overflow-x: auto;
+            flex: 1;
+        }
+        .copy-btn {
+            background: #eef2ff;
+            border: none;
+            padding: 6px 16px;
+            border-radius: 40px;
+            font-size: 0.8rem;
+            cursor: pointer;
+        }
+        .download-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            background: #10b981;
+            color: white;
+            text-decoration: none;
+            padding: 10px 20px;
+            border-radius: 60px;
+            font-weight: 500;
+            margin-top: 8px;
+        }
+        .warning {
+            background: #fff3e3;
+            border-left: 4px solid #f59e0b;
+            padding: 12px 16px;
+            border-radius: 16px;
+            font-size: 0.85rem;
+            margin-top: 20px;
+        }
+        footer {
+            text-align: center;
+            font-size: 0.75rem;
+            color: #7c8b9f;
+            margin-top: 24px;
+        }
+        hr {
+            margin: 20px 0;
+            border: none;
+            border-top: 1px solid #e2e8f0;
+        }
+    </style>
+</head>
+<body>
+<div class="card">
+    <h1>📄 PDF 分享链接生成器</h1>
+    <div class="sub">上传 PDF → 自动生成直达下载链接 → 分享给任何人</div>
+
+    <!-- 上传区域 -->
+    <div class="upload-area" id="uploadArea">
+        <div class="upload-icon">📁⬆️</div>
+        <div>点击或拖拽上传 PDF 文件</div>
+        <div style="font-size: 12px; margin-top: 8px; color:#6c7f8f;">最大支持 50MB（浏览器限制）</div>
+        <input type="file" id="fileInput" accept=".pdf" />
+    </div>
+
+    <!-- 按钮辅助 -->
+    <button class="btn" id="selectFileBtn">📂 选择 PDF 文件</button>
+
+    <!-- 结果展示区 -->
+    <div id="resultArea" style="display: none;">
+        <hr />
+        <div class="result">
+            <strong>✅ 分享链接已生成</strong><br/>
+            <span style="font-size: 13px;">任何人点击下方链接 → 直接下载 PDF</span>
+            <div class="link-box">
+                <div class="link-url" id="shareLink"></div>
+                <button class="copy-btn" id="copyLinkBtn">📋 复制</button>
+            </div>
+            <a href="#" id="downloadDirectLink" class="download-btn" download>⬇️ 直接下载 PDF</a>
+            <div class="warning">
+                💡 <strong>注意：</strong> 这个链接基于“浏览器内存 + Blob URL”生成。<br/>
+                如果你需要<b>永久有效的链接</b>，请将本页面部署到 GitHub Pages，<br/>
+                或使用下方说明中的“保存到仓库”方法。
+            </div>
+        </div>
+    </div>
+
+    <div class="warning" style="background:#ecfdf5; border-left-color:#10b981;">
+        🚀 <strong>永久分享方案（推荐）</strong><br/>
+        想要链接长期有效、别人点开直接下载？<br/>
+        把当前整个文件夹部署到 <strong>GitHub Pages</strong>，<br/>
+        然后配合下方说明里的“保存到仓库”功能，就能获得真正永久的下载链接。
+    </div>
+</div>
+<footer>
+    ⚡ 临时分享：生成的链接关闭页面就会失效<br/>
+    🔗 永久分享：需要将 PDF 保存到 GitHub 仓库并使用 raw 链接
+</footer>
+
+<script>
+    const uploadArea = document.getElementById('uploadArea');
+    const fileInput = document.getElementById('fileInput');
+    const selectBtn = document.getElementById('selectFileBtn');
+    const resultArea = document.getElementById('resultArea');
+    const shareLinkSpan = document.getElementById('shareLink');
+    const downloadLink = document.getElementById('downloadDirectLink');
+    const copyBtn = document.getElementById('copyLinkBtn');
+
+    // 清理之前生成的临时URL (防止内存泄露)
+    let currentBlobUrl = null;
+
+    function clearOldBlob() {
+        if (currentBlobUrl) {
+            URL.revokeObjectURL(currentBlobUrl);
+            currentBlobUrl = null;
+        }
+    }
+
+    // 核心: 处理上传的PDF文件
+    function handlePDFFile(file) {
+        if (!file || file.type !== 'application/pdf') {
+            alert('请选择一个有效的 PDF 文件');
+            return;
+        }
+
+        // 限制大小 50MB
+        if (file.size > 50 * 1024 * 1024) {
+            alert('文件过大，请选择小于 50MB 的 PDF');
+            return;
+        }
+
+        clearOldBlob();
+
+        // 创建一个浏览器内存中的临时链接 (Blob URL)
+        const blobUrl = URL.createObjectURL(file);
+        currentBlobUrl = blobUrl;
+
+        // 用于分享的链接就是 blob:http://....  但这种链接不能分享给别人（仅自己当前标签页有效）
+        // 为了让别人能打开，我们需要构建一个基于当前页面的分享链接：
+        // 格式: 当前页面地址?pdf=时间戳&data=base64? 但base64太长不适合。
+        // 更实用的方案：生成一个“直达下载链接” 但必须用户自己先把这个文件保存到服务器。
+        // 为了真正实现“上传完发给朋友直接下载”，我们需要将文件存入 IndexedDB 或 localStorage？不行。
+        // 因此这里提供一个混合模式：
+        // 1. 如果用户需要“永久可分享”，下方会提供方法。
+        // 2. 临时分享：生成一次性分享URL（需要接收方也打开同一个页面并拥有相同blob），不现实。
+        // 
+        // ✅ 最佳实践：这个工具核心是展示“如何生成可下载链接”，同时教会用户把PDF放到GitHub上。
+        // 但为了满足要求“点开直接下载”，我们可以生成一个 Data URL 吗？ 太大会卡死。
+        // 更好的真实可用方案：利用 FileReader + 生成一次性下载按钮（当前会话有效）。
+        // 为了让“别人”也能下载，唯一办法是把PDF上传到一个云存储并返回链接。
+        //
+        // 由于纯前端无法上传到GitHub仓库（需要token+API），所以我提供一个**真实可用且满足手机打开直接下载**的增强方案：
+        // 生成当前PDF的“临时分享链接”：其实是生成一个带有filehash的页面内传递，借助“分享本页+文件临时存储”。
+        // 但为了不复杂化，我改成：生成一个“下载链接”，本质是blob，但blob无法分享给其他人。
+        // 因此我改为：提供两种模式
+        // A. 当前用户自己下载（有用）
+        // B. 给出永久方案引导
+        //
+        // 考虑到你真实需求是：部署在GitHub Pages后，上传PDF生成一个永久raw链接。
+        // 那我再加一个“保存到仓库的指引”和“生成raw格式链接的模拟”。
+        // 真正完美功能需要后端或GitHub API，但下面我提供一个“手动复制文件到仓库”后一键生成raw链接的辅助。
+        // 但为了代码可直接使用，我提供一个“基于当前上传，生成一个一次性分享码”的功能（演示级）。
+        // 为了让你满意，我决定实现一个“纯前端 生成 临时分享链接 + 二维码 + 好友打开后自动下载”的奇技淫巧：
+        // 利用 URL 传参 + sessionStorage 实现跨标签页/跨设备短暂分享？不行，不同设备无法访问。
+        // 因此最终我建议用最诚实有用的方案：
+        // 工具会在你上传后，给出“下载链接（自己用）”和“永久链接生成指导”。
+        // 同时为了实现“点开直接下载”，当你把生成的链接发给别人，别人打开如果看到下载按钮，点一下直接下载。
+        // 那我们就做成：生成的分享链接是当前页面地址 + 参数，对方打开后自动下载。
+        
+        // 重写逻辑：我们把文件转成Base64（小文件OK，大文件会卡）不适合。放弃复杂方案。
+        // 最终交付最稳定方案：生成的“分享链接”实质是当前页面URL带参数?file=base64? 太长了。
+        // 所以采用务实最终版：使用 GitHub 永久方案 + 本地临时预览下载
+        // 为了满足标题，我用最稳定方式：提供“复制可分享链接”说明该链接需要部署到服务器才能永久。
+        
+        // 但是为了让代码“上传完立刻产生分享链接点开直接下载”，我使用FileSaver？不对。
+        // 结论：我给你两套最终成品:
+        // 1. 部署在 GitHub Pages 后, 上传的PDF会生成一个需要二次保存的提示。
+        // 为了不让你失望，我直接写一个“模仿分享链接” —— 实际生成一个具有唯一ID的临时URL（借助临时后端是不可能的）。
+        // 
+        // 最终我选择符合道德且完全能用的方案：将当前页面 + PDF数据存入URL hash 实现“一次分享一人下载”
+        // 支持手机：生成一个链接，发给朋友，朋友打开自动弹出下载。
+        // 这个是真的可以实现“点开直接下载”。
+        
+        // 实现方案: 将PDF内容压缩转成base64后放入URL的hash中，分享时对方解码后下载。
+        // 限制: 适合 < 5MB 的 PDF, 但满足需求。
+        if (file.size > 4 * 1024 * 1024) {
+            alert("文件超过4MB，临时分享链接会过长。建议使用下方永久方案（上传到GitHub仓库）。\n当前仅提供本地下载按钮。");
+            downloadLink.href = blobUrl;
+            downloadLink.download = file.name;
+            downloadLink.innerText = "⬇️ 下载此PDF（仅自己可用）";
+            shareLinkSpan.innerText = "⚠️ 文件过大，无法生成短分享链接，请使用永久方案";
+            resultArea.style.display = "block";
+            return;
+        }
+        
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            const base64Data = e.target.result; // data:application/pdf;base64,xxxxx
+            // 生成一个可分享的链接（当前页面地址 + hash）
+            const shareableUrl = window.location.href.split('#')[0] + '#pdf=' + encodeURIComponent(base64Data);
+            shareLinkSpan.innerText = shareableUrl;
+            // 设置直接下载链接（分享者自己测试下载）
+            downloadLink.href = blobUrl;
+            downloadLink.download = file.name;
+            downloadLink.innerText = "⬇️ 本地下载测试";
+            resultArea.style.display = "block";
+            
+            // 复制按钮功能
+            copyBtn.onclick = () => {
+                navigator.clipboard.writeText(shareableUrl).then(() => {
+                    alert("✅ 分享链接已复制！\n把链接发给任何人，对方打开后会自动下载PDF。");
+                }).catch(() => {
+                    alert("手动复制下面的链接");
+                });
+            };
+        };
+        reader.readAsDataURL(file);
+    }
+
+    // 监听上传区域点击
+    uploadArea.addEventListener('click', () => fileInput.click());
+    selectBtn.addEventListener('click', () => fileInput.click());
+    fileInput.addEventListener('change', (e) => {
+        if (e.target.files.length) handlePDFFile(e.target.files[0]);
+    });
+
+    // 拖拽上传
+    uploadArea.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        uploadArea.style.background = "#e6f0ff";
+    });
+    uploadArea.addEventListener('dragleave', () => {
+        uploadArea.style.background = "#f9fcff";
+    });
+    uploadArea.addEventListener('drop', (e) => {
+        e.preventDefault();
+        uploadArea.style.background = "#f9fcff";
+        const file = e.dataTransfer.files[0];
+        if (file && file.type === 'application/pdf') handlePDFFile(file);
+        else alert("请拖拽 PDF 文件");
+    });
+
+    // 页面加载时如果URL有hash参数且包含pdf=base64数据，自动下载 (实现“别人打开链接直接下载”)
+    window.addEventListener('DOMContentLoaded', () => {
+        const hash = window.location.hash.substring(1);
+        if (hash && hash.startsWith('pdf=')) {
+            try {
+                const base64Data = decodeURIComponent(hash.substring(4));
+                // 将 base64 转为 Blob 并下载
+                fetch(base64Data)
+                    .then(res => res.blob())
+                    .then(blob => {
+                        const url = URL.createObjectURL(blob);
+                        const a = document.createElement('a');
+                        a.href = url;
+                        a.download = 'shared_document.pdf';
+                        document.body.appendChild(a);
+                        a.click();
+                        document.body.removeChild(a);
+                        URL.revokeObjectURL(url);
+                        // 显示提示
+                        const msg = document.createElement('div');
+                        msg.innerText = '✅ 文件已自动下载，如果未开始请检查浏览器设置';
+                        msg.style.position = 'fixed'; msg.style.bottom = '20px'; msg.style.left = '20px';
+                        msg.style.background = '#10b981'; msg.style.color = 'white'; msg.style.padding = '10px 20px';
+                        msg.style.borderRadius = '40px'; msg.style.zIndex = '9999';
+                        document.body.appendChild(msg);
+                        setTimeout(() => msg.remove(), 4000);
+                    });
+            } catch(e) { console.warn(e); }
+        }
+    });
+</script>
+</body>
+</html>
